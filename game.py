@@ -1,8 +1,8 @@
 import socket
-import _pickle as pickle
+import pickle
 import contextlib
 with contextlib.redirect_stdout(None):
-    import pygame
+	import pygame
 import random
 import os
 pygame.font.init()

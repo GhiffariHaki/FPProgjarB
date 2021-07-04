@@ -1,12 +1,16 @@
 import socket
 from _thread import *
-import _pickle as pickle
+import pickle
 import time
 import random
 import math
 
-S = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-S.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+sock_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+HOST_NAME = socket.gethostname()
+SERVER_IP = socket.gethostbyname(HOST_NAME)
+
 PORT = 5555
 
 BALL_RADIUS = 5
@@ -20,19 +24,17 @@ MASS_LOSS_TIME = 7
 
 W, H = 1200, 720
 
-HOST_NAME = socket.gethostname()
-SERVER_IP = socket.gethostbyname(HOST_NAME)
 
 # TRY TO CONNECT TO SERVER
 try:
-    S.bind((SERVER_IP, PORT))
+    sock_server.bind((SERVER_IP, PORT))
+
 except socket.error as e:
     print(str(e))
     print("[SERVER] Server could not start")
     quit()
 
-S.listen()  #LISTEN FOR CONNECTION
-
+sock_server.listen(5)
 print(f"[SERVER] Server Started with local ip {SERVER_IP}")
 
 players = {}
@@ -129,14 +131,13 @@ def threaded_client(conn, _id):
 	current_id = _id
 
 	#MENERIMA NAMA DARI PLAYER
-	data = conn.recv(16)
-	name = data.decode("utf-8")
-	print("[LOG]", name, "connected to the server.")
+	username_client = conn.recv(16).decode("utf-8")
+	print("[LOG]", username_client, "connected to the server.")
 
 	#MEMBUAT PROPERTI UNTUK PLAYER
 	color = colors[current_id]
 	x, y = get_start_location(players)
-	players[current_id] = {"x":x, "y":y,"color":color,"score":0,"name":name}  # x, y color, score, name
+	players[current_id] = {"x":x, "y":y,"color":color,"score":0,"name":username_client}  # x, y color, score, name
 
 	# MENGIRIM DATA KE CLIENT
 	conn.send(str.encode(str(current_id)))
@@ -155,7 +156,7 @@ def threaded_client(conn, _id):
 				if game_time // MASS_LOSS_TIME == nxt:
 					nxt += 1
 					release_mass(players)
-					print(f"[GAME] {name}'s Mass depleting")
+					print(f"[GAME] {username_client}'s Mass depleting")
 		try:
 			# MENERIMA DATA DARI CLIENT
 			data = conn.recv(32)
@@ -205,7 +206,7 @@ def threaded_client(conn, _id):
 		time.sleep(0.001)
 
 	# When user disconnects	
-	print("[DISCONNECT] Name:", name, ", Client Id:", current_id, "disconnected")
+	print("[DISCONNECT] Name:", username_client, ", Client Id:", current_id, "disconnected")
 
 	connections -= 1 
 	del players[current_id]  # REMOVE FROM PLAYER LIST
@@ -223,18 +224,18 @@ print("[SERVER] Waiting for connections")
 # MENERIMA KONEKSI SELAMA SERVER HIDUP
 while True:
 	
-	host, addr = S.accept()
-	print("[CONNECTION] Connected to:", addr)
+	sock_client, addr_client = sock_server.accept()
+	print("[CONNECTION] Connected to:", addr_client)
 
 	#MEMULAI GAME APABILA ADA CLIENTS YANG TERKONEKSI
-	if addr[0] == SERVER_IP and not(start):
+	if addr_client[0] == SERVER_IP and not(start):
 		start = True
 		start_time = time.time()
 		print("[STARTED] Game Started")
 
 	# MEMBUAT THREAD UNTUK CLIENT TERSEBUT
 	connections += 1
-	start_new_thread(threaded_client,(host,_id))
+	start_new_thread(threaded_client,(sock_client,_id))
 	_id += 1
 
 # END PROGRAM

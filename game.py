@@ -187,6 +187,14 @@ while True:
  		break
  	else:
  		print("Error, Hanya boleh 8 karakter")
+	
+	while True:
+        	message = self.client.recv(1024)
+        	print('pesan dari server: ',message )
+        	message = raw_input("massukkan pesan anda : ")
+       		self.client.send(message)
+		pass
+	
 
 # SETUP PYGAME
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)

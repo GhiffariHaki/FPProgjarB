@@ -8,6 +8,7 @@ class Network:
     def __init__(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #self.client.settimeout(10.0)
+        #untuk IP_hostnya pakai IP sendiri
         self.host = "192.168.56.1"
         self.port = 5555
         self.addr = (self.host, self.port)

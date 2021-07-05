@@ -1,48 +1,13 @@
 import socket
 import pickle
+import threading
 import contextlib
 with contextlib.redirect_stdout(None):
 	import pygame
+from client import Network
 import random
 import os
 pygame.font.init()
-
-#Class Client untuk connect, mengirim & menerima informasi dari server
-class Client:
-    def __init__(self):
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #self.client.settimeout(10.0)
-		#ALAMAT SERVER
-        self.host = "192.168.100.49"
-        self.port = 5555
-        self.addr = (self.host, self.port)
-
-	#CONNECT KE SERVER & MENGIRIM NAMA
-    def connect(self, name):
-        self.client.connect(self.addr)
-        self.client.send(str.encode(name))
-        val = self.client.recv(8)
-        return int(val.decode()) # can be int because will be an int id
-
-    def disconnect(self):
-        self.client.close()
-
-	#MENGIRIM DATA KE SERVER
-    def send(self, data, pick=False):
-        try:
-            if pick:
-                self.client.send(pickle.dumps(data))
-            else:
-                self.client.send(str.encode(data))
-            reply = self.client.recv(2048*4)
-            try:
-                reply = pickle.loads(reply)
-            except Exception as e:
-                print(e)
-
-            return reply
-        except socket.error as e:
-            print(e)
 
 # KONSTANTA
 PLAYER_RADIUS = 10
@@ -112,14 +77,38 @@ def redraw_window(players, balls, game_time, score):
 	text = TIME_FONT.render("Score: " + str(round(score)),1,(0,0,0))
 	WIN.blit(text,(10,15 + text.get_height()))
 
+#FUNGSI UNTUK MENERIMA PESAN
+def read_msg(sock_cli):
+    while True:
+        data = sock_cli.recv(1024)
+        data = data.decode("utf-8")
+            
+        if not data:break
+
+        print(data)
+
+#FUNGSI UNTUK MENULIS PESAN
+def write_msg(sock_cli):
+    while True:
+        msg = input("Message:")
+        sock_cli.send(bytes("msg|{}".format(msg), "utf-8"))
+
+
 #FUNGSI MAIN UNTUK RUN GAMENYA
 def main(name):
 
 	global players
 
 	# Connect ke server
-	server = Client()
+	server = Network()
 	current_id = server.connect(name)
+
+	read_thread_cli = threading.Thread(target=read_msg, args=(server,))
+	read_thread_cli.start()
+
+	write_thread_cli = threading.Thread(target=write_msg, args=(server,))
+	write_thread_cli.start()
+
 	balls, players, game_time = server.send("get")
 
 	# Limit 30 fps
@@ -179,27 +168,18 @@ def main(name):
 	pygame.quit()
 	quit()
 
-
-#MENDAPAT NAMA
+# get users name
 while True:
- 	name = input("Masukkan Nama Anda: ")
- 	if  0 < len(name) < 9:
+ 	name = input("Please enter your name: ")
+ 	if  0 < len(name) < 20:
  		break
  	else:
- 		print("Error, Hanya boleh 8 karakter")
-	
-	while True:
-        	message = self.client.recv(1024)
-        	print('pesan dari server: ',message )
-        	message = raw_input("massukkan pesan anda : ")
-       		self.client.send(message)
-		pass
-	
+ 		print("Error, this name is not allowed (must be between 1 and 19 characters [inclusive])")
 
-# SETUP PYGAME
+# setup pygame window
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)
 WIN = pygame.display.set_mode((LEBAR,TINGGI))
 pygame.display.set_caption("Jello Battle Royale")
 
-# Start game
+# start game
 main(name)

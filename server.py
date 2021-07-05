@@ -1,5 +1,5 @@
 import socket
-from _thread import *
+import threading
 import pickle
 import time
 import random
@@ -38,6 +38,7 @@ sock_server.listen(5)
 print(f"[SERVER] Server Started with local ip {SERVER_IP}")
 
 clients = {}
+players = {}
 balls = []
 connections = 0
 _id = 0
@@ -50,26 +51,18 @@ nxt = 1
 
 # FUNCTIONS
 
-def send_broadcast(clients, data, sender_addr_cli):
-    for sock_cli, addr_cli, _ in clients.values():
-        if not (sender_addr_cli[0] == addr_cli[0] and sender_addr_cli[1] == addr_cli[1]):
-            send_msg(sock_cli, data)
-
-def send_msg(sock_cli, data):
-    sock_cli.send(bytes(data, "utf-8"))
-
 #FUNGSI UNTUK MENGATUR JELLO AGAR MENGECIL DENGAN INTERVAL
-def release_mass(clients):
-	for player in clients:
-		p = clients[player]
+def release_mass(players):
+	for player in players:
+		p = players[player]
 		if p["score"] > 8:
 			p["score"] = math.floor(p["score"]*0.95)
 
 #FUNGSI UNTUK MENGECEK APAKAH ADA TABRAKAN ANTARA PLAYER DENGAN BOLA
-def check_collision(clients, balls):
+def check_collision(players, balls):
 	to_delete = []
-	for player in clients:
-		p = clients[player]
+	for player in players:
+		p = players[player]
 		x = p["x"]
 		y = p["y"]
 		for ball in balls:
@@ -82,22 +75,22 @@ def check_collision(clients, balls):
 				balls.remove(ball)
 
 #FUNGSI UNTUK MENGECEK APAKAH ADA TABRAKAN ANTAR PLAYER
-def player_collision(clients):
-	sort_clients = sorted(clients, key=lambda x: clients[x]["score"])
-	for x, player1 in enumerate(sort_clients):
-		for player2 in sort_clients[x+1:]:
-			p1x = clients[player1]["x"]
-			p1y = clients[player1]["y"]
+def player_collision(players):
+	sort_players = sorted(players, key=lambda x: players[x]["score"])
+	for x, player1 in enumerate(sort_players):
+		for player2 in sort_players[x+1:]:
+			p1x = players[player1]["x"]
+			p1y = players[player1]["y"]
 
-			p2x = clients[player2]["x"]
-			p2y = clients[player2]["y"]
+			p2x = players[player2]["x"]
+			p2y = players[player2]["y"]
 
 			dis = math.sqrt((p1x - p2x)**2 + (p1y-p2y)**2)
-			if dis < clients[player2]["score"] - clients[player1]["score"]*0.85:
-				clients[player2]["score"] = math.sqrt(clients[player2]["score"]**2 + clients[player1]["score"]**2) # adding areas instead of radii
-				clients[player1]["score"] = 0
-				clients[player1]["x"], clients[player1]["y"] = get_start_location(clients)
-				print(f"[GAME] " + clients[player2]["name"] + " ATE " + clients[player1]["name"])
+			if dis < players[player2]["score"] - players[player1]["score"]*0.85:
+				players[player2]["score"] = math.sqrt(players[player2]["score"]**2 + players[player1]["score"]**2) # adding areas instead of radii
+				players[player1]["score"] = 0
+				players[player1]["x"], players[player1]["y"] = get_start_location(players)
+				print(f"[GAME] " + players[player2]["name"] + " ATE " + players[player1]["name"])
 
 #FUNGSI UNTUK GENERATE BOLA-BOLA YANG BISA DIMAKAN OLEH JELLO DENGAN RANDOM
 def create_balls(balls, n):
@@ -106,8 +99,8 @@ def create_balls(balls, n):
 			stop = True
 			x = random.randrange(0,W)
 			y = random.randrange(0,H)
-			for player in clients:
-				p = clients[player]
+			for player in players:
+				p = players[player]
 				dis = math.sqrt((x - p["x"])**2 + (y-p["y"])**2)
 				if dis <= START_RADIUS + p["score"]:
 					stop = False
@@ -117,13 +110,13 @@ def create_balls(balls, n):
 		balls.append((x,y, random.choice(colors)))
 
 #FUNGSI UNTUK MENENTUKAN LOKASI AWAL PLAYER DENGAN RANDOM
-def get_start_location(clients):
+def get_start_location(players):
 	while True:
 		stop = True
 		x = random.randrange(0,W)
 		y = random.randrange(0,H)
-		for player in clients:
-			p = clients[player]
+		for player in players:
+			p = players[player]
 			dis = math.sqrt((x - p["x"])**2 + (y-p["y"])**2)
 			if dis <= START_RADIUS + p["score"]:
 				stop = False
@@ -133,22 +126,22 @@ def get_start_location(clients):
 	return (x,y)
 
 #FUNGSI UNTUK MEMBUAT THREAD UNTUK TIAP PLAYER DALAM SERVER
-def threaded_client(conn, _id):
-	global connections, clients, balls, game_time, nxt, start
+def threaded_client(clients, sock_client, addr_client, _id):
+	global connections, players, balls, game_time, nxt, start
 
 	current_id = _id
 
 	#MENERIMA NAMA DARI PLAYER
-	username_client = conn.recv(16).decode("utf-8")
+	username_client = sock_client.recv(16).decode("utf-8")
 	print("[LOG]", username_client, "connected to the server.")
 
 	#MEMBUAT PROPERTI UNTUK PLAYER
 	color = colors[current_id]
-	x, y = get_start_location(clients)
-	clients[current_id] = {"x":x, "y":y,"color":color,"score":0,"name":username_client}  # x, y color, score, name
+	x, y = get_start_location(players)
+	players[current_id] = {"x":x, "y":y,"color":color,"score":0,"name":username_client}  # x, y color, score, name
 
 	# MENGIRIM DATA KE CLIENT
-	conn.send(str.encode(str(current_id)))
+	sock_client.send(str.encode(str(current_id)))
 
 	# server will recieve basic commands from client
 	# it will send back all of the other clients info
@@ -163,11 +156,11 @@ def threaded_client(conn, _id):
 			else:
 				if game_time // MASS_LOSS_TIME == nxt:
 					nxt += 1
-					release_mass(clients)
+					release_mass(players)
 					print(f"[GAME] {username_client}'s Mass depleting")
 		try:
 			# MENERIMA DATA DARI CLIENT
-			data = conn.recv(1024)
+			data = sock_client.recv(1024)
 
 			if not data:
 				break
@@ -180,32 +173,36 @@ def threaded_client(conn, _id):
 				split_data = data.split(" ")
 				x = int(split_data[1])
 				y = int(split_data[2])
-				clients[current_id]["x"] = x
-				clients[current_id]["y"] = y
+				players[current_id]["x"] = x
+				players[current_id]["y"] = y
 
 				# CHECK COLLISION
 				if start:
-					check_collision(clients, balls)
-					player_collision(clients)
+					check_collision(players, balls)
+					player_collision(players)
 
 				# GENERATE BOLA MAKANAN APABILA KURANG DARI 150
 				if len(balls) < 150:
 					create_balls(balls, random.randrange(100,150))
 					print("[GAME] Generating more orbs")
 
-				send_data = pickle.dumps((balls,clients, game_time))
+				send_data = pickle.dumps((balls,players, game_time))
 
 			elif data.split(" ")[0] == "id":
 				send_data = str.encode(str(current_id)) 
 
 			elif data.split(" ")[0] == "jump":
-				send_data = pickle.dumps((balls,clients, game_time))
-			else:
-				# any other command just send back list of clients
-				send_data = pickle.dumps((balls,clients, game_time))
+				send_data = pickle.dumps((balls,players, game_time))
 
-			# SEND DATA KE CLIENTS
-			conn.send(send_data)
+			elif data.split("|")[0] == "msg":
+				send_data = "{}: {}".format(username_client, data.split("|")[1])
+					
+			else:
+				# any other command just send back list of players
+				send_data = pickle.dumps((balls,players, game_time))
+
+			# SEND DATA KE players
+			sock_client.send(send_data)
 
 		except Exception as e:
 			print(e)
@@ -217,8 +214,8 @@ def threaded_client(conn, _id):
 	print("[DISCONNECT] Name:", username_client, ", Client Id:", current_id, "disconnected")
 
 	connections -= 1 
-	del clients[current_id]  # REMOVE FROM PLAYER LIST
-	conn.close()  # CLOSE CONNECTION
+	del players[current_id]  # REMOVE FROM PLAYER LIST
+	sock_client.close()  # CLOSE CONNECTION
 
 
 # MAINLOOP
@@ -235,7 +232,7 @@ while True:
 	sock_client, addr_client = sock_server.accept()
 	print("[CONNECTION] Connected to:", addr_client)
 
-	#MEMULAI GAME APABILA ADA CLIENTS YANG TERKONEKSI
+	#MEMULAI GAME APABILA ADA players YANG TERKONEKSI
 	if addr_client[0] == SERVER_IP and not(start):
 		start = True
 		start_time = time.time()
@@ -243,7 +240,10 @@ while True:
 
 	# MEMBUAT THREAD UNTUK CLIENT TERSEBUT
 	connections += 1
-	start_new_thread(threaded_client,(sock_client,_id))
+	thread_client = threading.Thread(target=threaded_client, args=(clients, sock_client, addr_client, _id, ))
+	thread_client.start()
+	
+	clients["{}".format(_id)] = (sock_client, addr_client, thread_client)
 	_id += 1
 
 # END PROGRAM

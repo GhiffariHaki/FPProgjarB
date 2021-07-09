@@ -14,11 +14,12 @@ PLAYER_RADIUS = 10
 START_VEL = 9
 BALL_RADIUS = 5
 
-LEBAR, TINGGI = 1200, 720
+INNER_WIDTH, INNER_HEIGHT = 850, 720
+OUTER_WIDTH, OUTER_HEIGHT = 1200, 720
 
-NAME_FONT = pygame.font.SysFont("comicsans", 20)
-TIME_FONT = pygame.font.SysFont("comicsans", 30)
-SCORE_FONT = pygame.font.SysFont("comicsans", 26)
+NAME_FONT = pygame.font.SysFont("CascadiaCode.ttf", 22)
+TIME_FONT = pygame.font.SysFont("CascadiaCode.ttf", 22)
+SCORE_FONT = pygame.font.SysFont("CascadiaCode.ttf", 22)
 
 #WARNA
 COLORS = [(255,0,0), (255, 128, 0), (255,255,0), (128,255,0),(0,255,0),(0,255,128),(0,255,255),(0, 128, 255), (0,0,255), (0,0,255), (128,0,255),(255,0,255), (255,0,128),(128,128,128), (0,0,0)]
@@ -55,43 +56,27 @@ def redraw_window(players, balls, game_time, score):
 		p = players[player]
 		pygame.draw.circle(WIN, p["color"], (p["x"], p["y"]), PLAYER_RADIUS + round(p["score"]))
 		# render and draw name for each player
-		text = NAME_FONT.render(p["name"], 1, (0,0,0))
+		text = NAME_FONT.render(p["name"], True, (0,0,0))
 		WIN.blit(text, (p["x"] - text.get_width()/2, p["y"] - text.get_height()/2))
 
 	# draw scoreboard
 	sort_players = list(reversed(sorted(players, key=lambda x: players[x]["score"])))
-	title = TIME_FONT.render("Scoreboard", 1, (0,0,0))
+	title = TIME_FONT.render("Scoreboard", True, (0,0,0))
 	start_y = 25
-	x = LEBAR - title.get_width() - 10
+	x = OUTER_WIDTH - title.get_width() - 10
 	WIN.blit(title, (x, 5))
 
 	ran = min(len(players), 3)
 	for count, i in enumerate(sort_players[:ran]):
-		text = SCORE_FONT.render(str(count+1) + ". " + str(players[i]["name"]), 1, (0,0,0))
+		text = SCORE_FONT.render(str(count+1) + ". " + str(players[i]["name"]), True, (0,0,0))
 		WIN.blit(text, (x, start_y + count * 20))
 
 	# draw time
-	text = TIME_FONT.render("Time: " + convert_time(game_time), 1, (0,0,0))
-	WIN.blit(text,(10,10))
+	text = TIME_FONT.render("Time: " + convert_time(game_time), True, (0,0,0))
+	WIN.blit(text,(860,10))
 	# draw score
-	text = TIME_FONT.render("Score: " + str(round(score)),1,(0,0,0))
-	WIN.blit(text,(10,15 + text.get_height()))
-
-#FUNGSI UNTUK MENERIMA PESAN
-def read_msg(sock_cli):
-    while True:
-        data = sock_cli.recv(1024)
-        if not data: continue
-        if len(data) < 30:
-            print(data)
-            
-
-#FUNGSI UNTUK MENULIS PESAN
-def write_msg(sock_cli):
-    while True:
-        msg = input("Message:")
-        sock_cli.send("msg|{}".format(msg))
-
+	text = TIME_FONT.render("Score: " + str(round(score)),True,(0,0,0))
+	WIN.blit(text,(860,15 + text.get_height()))
 
 #FUNGSI MAIN UNTUK RUN GAMENYA
 def main(name):
@@ -101,12 +86,6 @@ def main(name):
 	# Connect ke server
 	server = Network()
 	current_id = server.connect(name)
-
-	read_thread_cli = threading.Thread(target=read_msg, args=(server,))
-	read_thread_cli.start()
-
-	write_thread_cli = threading.Thread(target=write_msg, args=(server,))
-	write_thread_cli.start()
 
 	balls, players, game_time = server.send("get")
 
@@ -131,7 +110,7 @@ def main(name):
 				player["x"] = player["x"] - vel
 
 		if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-			if player["x"] + vel + PLAYER_RADIUS + player["score"] <= LEBAR:
+			if player["x"] + vel + PLAYER_RADIUS + player["score"] <= INNER_WIDTH:
 				player["x"] = player["x"] + vel
 
 		if keys[pygame.K_UP] or keys[pygame.K_w]:
@@ -139,7 +118,7 @@ def main(name):
 				player["y"] = player["y"] - vel
 
 		if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-			if player["y"] + vel + PLAYER_RADIUS + player["score"] <= TINGGI:
+			if player["y"] + vel + PLAYER_RADIUS + player["score"] <= INNER_HEIGHT:
 				player["y"] = player["y"] + vel
 
 		data = "move " + str(player["x"]) + " " + str(player["y"])
@@ -177,7 +156,7 @@ while True:
 
 # setup pygame window
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)
-WIN = pygame.display.set_mode((LEBAR,TINGGI))
+WIN = pygame.display.set_mode((OUTER_WIDTH,OUTER_HEIGHT))
 pygame.display.set_caption("Jello Battle Royale")
 
 # start game

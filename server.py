@@ -160,7 +160,7 @@ def threaded_client(clients, sock_client, addr_client, _id):
 					print(f"[GAME] {username_client}'s Mass depleting")
 		try:
 			# MENERIMA DATA DARI CLIENT
-			data = sock_client.recv(1024)
+			data = sock_client.recv(32)
 
 			if not data:
 				break
@@ -242,7 +242,7 @@ while True:
 	connections += 1
 	thread_client = threading.Thread(target=threaded_client, args=(clients, sock_client, addr_client, _id, ))
 	thread_client.start()
-	
+
 	clients["{}".format(_id)] = (sock_client, addr_client, thread_client)
 	_id += 1
 

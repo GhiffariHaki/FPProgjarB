@@ -81,17 +81,16 @@ def redraw_window(players, balls, game_time, score):
 def read_msg(sock_cli):
     while True:
         data = sock_cli.recv(1024)
-        data = data.decode("utf-8")
+        if not data: continue
+        if len(data) < 30:
+            print(data)
             
-        if not data:break
-
-        print(data)
 
 #FUNGSI UNTUK MENULIS PESAN
 def write_msg(sock_cli):
     while True:
         msg = input("Message:")
-        sock_cli.send(bytes("msg|{}".format(msg), "utf-8"))
+        sock_cli.send("msg|{}".format(msg))
 
 
 #FUNGSI MAIN UNTUK RUN GAMENYA

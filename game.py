@@ -7,25 +7,58 @@ with contextlib.redirect_stdout(None):
 from client import Network
 import random
 import os
+
 pygame.font.init()
 
-# KONSTANTA
 PLAYER_RADIUS = 10
 START_VEL = 9
 BALL_RADIUS = 5
+FONT = "CascadiaCode.ttf"
+TITLE = "Jello Battle Royale"
 
-INNER_WIDTH, INNER_HEIGHT = 850, 720
-OUTER_WIDTH, OUTER_HEIGHT = 1200, 720
+INNER_WIDTH = 850
+INNER_HEIGHT = 720
+OUTER_WIDTH = 1200
+OUTER_HEIGHT = 720
 
-NAME_FONT = pygame.font.SysFont("CascadiaCode.ttf", 22)
-TIME_FONT = pygame.font.SysFont("CascadiaCode.ttf", 22)
-SCORE_FONT = pygame.font.SysFont("CascadiaCode.ttf", 22)
-
-#WARNA
-COLORS = [(255,0,0), (255, 128, 0), (255,255,0), (128,255,0),(0,255,0),(0,255,128),(0,255,255),(0, 128, 255), (0,0,255), (0,0,255), (128,0,255),(255,0,255), (255,0,128),(128,128,128), (0,0,0)]
+COLORS = [(255,0,0),
+		(255,128,0), 
+		(255,255,0), 
+		(128,255,0),
+		(0,255,0),
+		(0,255,128),
+		(0,255,255),
+		(0,128,255),
+		(0,0,255), 
+		(0,0,255), 
+		(128,0,255),
+		(255,0,255),
+		(255,0,128),
+		(128,128,128),
+		(0,0,0)]
 
 players = {}
 balls = []
+msg_history = []
+
+clock = pygame.time.Clock()
+name_font = pygame.font.SysFont(FONT, 22)
+time_font = pygame.font.SysFont(FONT, 22)
+score_font = pygame.font.SysFont(FONT, 22)
+message_font = pygame.font.SysFont(FONT, 22)
+window = pygame.display.set_mode((OUTER_WIDTH,OUTER_HEIGHT))
+title = pygame.display.set_caption(TITLE)
+
+user_msg = ""
+
+history_rect = pygame.Rect(INNER_WIDTH + 10,100,140,550)
+input_rect = pygame.Rect(INNER_WIDTH + 10,670,140,25)
+color_passive = pygame.Color('gray')
+color_active = pygame.Color('black')
+color_warning = pygame.Color('red')
+color = color_passive
+
+rect_status = 1
 
 # FUNCTIONS KONVERSI TIME UNTUK MENGUBAH WAKTU DARI SECOND KE MINUTES
 def convert_time(t):
@@ -45,52 +78,58 @@ def convert_time(t):
 
 #FUNGSI UNTUK DRAW TIAP FRAME
 def redraw_window(players, balls, game_time, score):
-	WIN.fill((255,255,255)) # fill screen white, to clear old frames
+	window.fill((255,255,255)) # fill screen white, to clear old frames
 	
 		# draw all the orbs/balls
 	for ball in balls:
-		pygame.draw.circle(WIN, ball[2], (ball[0], ball[1]), BALL_RADIUS)
+		pygame.draw.circle(window, ball[2], (ball[0], ball[1]), BALL_RADIUS)
 
 	# draw each player in the list
 	for player in sorted(players, key=lambda x: players[x]["score"]):
 		p = players[player]
-		pygame.draw.circle(WIN, p["color"], (p["x"], p["y"]), PLAYER_RADIUS + round(p["score"]))
+		pygame.draw.circle(window, p["color"], (p["x"], p["y"]), PLAYER_RADIUS + round(p["score"]))
 		# render and draw name for each player
-		text = NAME_FONT.render(p["name"], True, (0,0,0))
-		WIN.blit(text, (p["x"] - text.get_width()/2, p["y"] - text.get_height()/2))
+		text = name_font.render(p["name"], True, (0,0,0))
+		window.blit(text, (p["x"] - text.get_width()/2, p["y"] - text.get_height()/2))
 
 	# draw scoreboard
 	sort_players = list(reversed(sorted(players, key=lambda x: players[x]["score"])))
-	title = TIME_FONT.render("Scoreboard", True, (0,0,0))
+	title = time_font.render("Scoreboard", True, (0,0,0))
 	start_y = 25
 	x = OUTER_WIDTH - title.get_width() - 10
-	WIN.blit(title, (x, 5))
+	window.blit(title, (x, 5))
 
 	ran = min(len(players), 3)
 	for count, i in enumerate(sort_players[:ran]):
-		text = SCORE_FONT.render(str(count+1) + ". " + str(players[i]["name"]), True, (0,0,0))
-		WIN.blit(text, (x, start_y + count * 20))
+		text = score_font.render(str(count+1) + ". " + str(players[i]["name"]), True, (0,0,0))
+		window.blit(text, (x, start_y + count * 20))
 
 	# draw time
-	text = TIME_FONT.render("Time: " + convert_time(game_time), True, (0,0,0))
-	WIN.blit(text,(860,10))
+	text = time_font.render("Time: " + convert_time(game_time), True, (0,0,0))
+	window.blit(text,(860,10))
 	# draw score
-	text = TIME_FONT.render("Score: " + str(round(score)),True,(0,0,0))
-	WIN.blit(text,(860,15 + text.get_height()))
+	text = time_font.render("Score: " + str(round(score)),True,(0,0,0))
+	window.blit(text,(860,15 + text.get_height()))
 
 #FUNGSI MAIN UNTUK RUN GAMENYA
 def main(name):
 
 	global players
+	global msg_history
+	global rect_status
+	global user_msg
+	global color_passive
+	global color_active
+	global color_warning
+	global input_rect
+	global history_rect
+
 
 	# Connect ke server
 	server = Network()
 	current_id = server.connect(name)
 
 	balls, players, game_time = server.send("get")
-
-	# Limit 30 fps
-	clock = pygame.time.Clock()
 
 	run = True
 	while run:
@@ -105,37 +144,87 @@ def main(name):
 
 		data = ""
 		# MOVING IN GAME
-		if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+		if keys[pygame.K_LEFT]:
 			if player["x"] - vel - PLAYER_RADIUS - player["score"] >= 0:
 				player["x"] = player["x"] - vel
 
-		if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+		if keys[pygame.K_RIGHT]:
 			if player["x"] + vel + PLAYER_RADIUS + player["score"] <= INNER_WIDTH:
 				player["x"] = player["x"] + vel
 
-		if keys[pygame.K_UP] or keys[pygame.K_w]:
+		if keys[pygame.K_UP]:
 			if player["y"] - vel - PLAYER_RADIUS - player["score"] >= 0:
 				player["y"] = player["y"] - vel
 
-		if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+		if keys[pygame.K_DOWN]:
 			if player["y"] + vel + PLAYER_RADIUS + player["score"] <= INNER_HEIGHT:
 				player["y"] = player["y"] + vel
 
 		data = "move " + str(player["x"]) + " " + str(player["y"])
 
+
+
 		# SEND DATA KE SERVER
 		balls, players, game_time = server.send(data)
 
+		# DRAW MESSAGE BOX
+		msg_count = len(msg_history)
+
 		for event in pygame.event.get():
-			# Pencet (X) di Window = Keluar game
 			if event.type == pygame.QUIT:
 				run = False
 
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				if input_rect.collidepoint(event.pos):
+					rect_status = 2
+				else:
+					rect_status = 1
+
 			if event.type == pygame.KEYDOWN:
-				# Pencet ESCAPE = Keluar game
 				if event.key == pygame.K_ESCAPE:
 					run = False
 
+				if rect_status != 1:
+					if event.key == pygame.K_BACKSPACE:
+						user_msg = user_msg[:-1]
+						rect_status = 2
+
+					elif len(user_msg) == 36:
+						rect_status = 3
+
+					elif event.key == pygame.K_RETURN:
+						if msg_count == 14:
+							msg_history = msg_history[1:]
+							msg_history.append(user_msg)
+						else:
+							msg_history.append(user_msg)
+						user_msg = ''
+
+					else:
+						user_msg += event.unicode
+			
+		pygame.draw.rect(window,color_passive,history_rect,2)
+		history_rect.w = max(100,329)
+
+		y = 0
+		for msg in msg_history:
+			history_surface = message_font.render(msg,True,(0,0,0))
+			window.blit(history_surface,(15, 100 + y * 30))
+			y += 1
+
+		if rect_status == 1:
+			color = color_passive
+		elif rect_status == 2:
+			color = color_active
+		else:
+			color = color_warning
+
+		pygame.draw.rect(window,color,input_rect,2)
+
+		text_surface = message_font.render(user_msg,True,(0,0,0))
+		window.blit(text_surface,(input_rect.x + 5, input_rect.y + 5))
+
+		input_rect.w = max(329,text_surface.get_width() + 9)
 
 		# Redraw & Update frame
 		redraw_window(players, balls, game_time, player["score"])
@@ -156,8 +245,6 @@ while True:
 
 # setup pygame window
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)
-WIN = pygame.display.set_mode((OUTER_WIDTH,OUTER_HEIGHT))
-pygame.display.set_caption("Jello Battle Royale")
 
 # start game
 main(name)

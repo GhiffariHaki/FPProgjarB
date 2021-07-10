@@ -40,6 +40,7 @@ print(f"[SERVER] Server Started with local ip {SERVER_IP}")
 clients = {}
 players = {}
 balls = []
+msg_history = []
 connections = 0
 _id = 0
 colors = [(255,0,0), (255, 128, 0), (255,255,0), (128,255,0),(0,255,0),(0,255,128),(0,255,255),(0, 128, 255), (0,0,255), (0,0,255), (128,0,255),(255,0,255), (255,0,128),(128,128,128), (0,0,0)]
@@ -127,7 +128,7 @@ def get_start_location(players):
 
 #FUNGSI UNTUK MEMBUAT THREAD UNTUK TIAP PLAYER DALAM SERVER
 def threaded_client(clients, sock_client, addr_client, _id):
-	global connections, players, balls, game_time, nxt, start
+	global connections, players, balls, game_time, nxt, start, msg_history
 
 	current_id = _id
 
@@ -167,6 +168,11 @@ def threaded_client(clients, sock_client, addr_client, _id):
 
 			data = data.decode("utf-8")
 			#print("[DATA] Recieved", data, "from client id:", current_id)
+
+			if data.split(" ")[0] == "msg":
+				split_data = data.split(" ")
+				#SPLIT_DATA[1] = NAMA ORANG YANG NGIRIM ||| SPLIT_DATA[2] = PESANNYA
+				print ("[MESSAGE] " + split_data[1] + " : " + split_data[2])
 
 			# MENCARI COMMAND MOVE & MENGUBAH LOKASI PLAYER
 			if data.split(" ")[0] == "move":

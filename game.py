@@ -1,6 +1,7 @@
 import socket
 import pickle
 import threading
+import sys
 import contextlib
 with contextlib.redirect_stdout(None):
 	import pygame
@@ -162,10 +163,27 @@ def main(name):
 
 		data = "move " + str(player["x"]) + " " + str(player["y"])
 
+		if keys[pygame.K_RETURN]:
+			## MINTA MESSAGE
+			print("Send Message :")
+			message = input()
+			message = message + " " + name
+			## PRINT MESSAGE
+			sys.stdout.write('<You> ')
+			message = ' '.join(message.split(' ')[:-1])
+			sys.stdout.write(message + '\n')
+
+			data =  "msg " + name + " " + message
+
+			if(len(msg_history) == 0):
+				print ("GAADA MESSAGE")
+			else:
+				print (msg_history)
 
 
 		# SEND DATA KE SERVER
 		balls, players, game_time = server.send(data)
+		#print(data)
 
 		# DRAW MESSAGE BOX
 		msg_count = len(msg_history)
@@ -234,14 +252,12 @@ def main(name):
 	server.disconnect()
 	pygame.quit()
 	quit()
-
-# get users name
 while True:
- 	name = input("Please enter your name: ")
- 	if  0 < len(name) < 20:
- 		break
- 	else:
- 		print("Error, this name is not allowed (must be between 1 and 19 characters [inclusive])")
+	name = input("Please enter your name: ")
+	if  (0 < len(name)) and (len(name) > 8) :
+		print("Error, this name is not allowed (must be between 1 and 8 characters [inclusive])")
+	else:
+		break
 
 # setup pygame window
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)

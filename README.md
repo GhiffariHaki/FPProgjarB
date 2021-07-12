@@ -7,6 +7,8 @@
 ### Judul: <br>
 Jello Battle Royale <br>
 
+![alt text](/img/table.png) <br>
+
 ### Deskripsi: <br>
 Jello Battle Royale terinspirasi dari game-game .io seperti agar.io. Game ini bertujuan untuk menjadi entitas terbesar. Player adalah sebuah lingkaran dimana lingkaran tersebut dapat membesar dan mengecil. Player harus memakan lingkaran-lingkaran yang ada di sekitarnya termasuk player lain untuk memperbesar dirinya.
 

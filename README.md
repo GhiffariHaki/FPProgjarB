@@ -1,6 +1,6 @@
 # FP ProgjarB <br>
 Oleh:
-- Mochamad Haikal Ghiffari(05111840000095) <br>
+- Mochamad Haikal Ghiffari (05111840000095) <br>
 - Dwi Wahyu Santoso (05111840000121) <br>
 - I Kadek Ricky Suirta (05111840000146) <br>
 

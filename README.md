@@ -4,11 +4,15 @@ Oleh:
 - Dwi Wahyu Santoso (05111840000121) <br>
 - I Kadek Ricky Suirta (05111840000146) <br>
 
-# Jello Battle Royale
-Jello Battle Royale terinspirasi dari game-game .io seperti agar.io. Game ini bertujuan untuk menjadi entitas terbesar dengan 
-cara memakan bola yang tersebar dalam map atau memakan player lain
+### Judul: <br>
+Jello Battle Royale <br>
 
-### Aturan dalam game
+### Deskripsi: <br>
+Jello Battle Royale terinspirasi dari game-game .io seperti agar.io. Game ini bertujuan untuk menjadi entitas terbesar. Player adalah sebuah lingkaran dimana lingkaran tersebut dapat membesar dan mengecil. Player harus memakan lingkaran-lingkaran yang ada di sekitarnya termasuk player lain untuk memperbesar dirinya.
+
+### Aturan dalam game:
 - Setiap game berlangsung selama 5 menit (Dimulai saat player pertama memasuki server)
+- Player hanya bisa memakan palyer lain yang ukuran lingkarannya lebih kecil dari dirinya.
 - Semakin besar jello anda, maka akan semakin lambat pergerakannya.
-- Ukuran jello akan berkurang setiap interval waktu dan sesuai ukurannya (Lebih besar = Lebih banyak berkurang)
+- Ukuran jello akan berkurang setiap interval waktu.
+- Semakin besar jello maka semakin pendek interval waktu untuk menyusut.
